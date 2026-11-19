@@ -50,10 +50,11 @@ input:focus,textarea:focus,select:focus{outline:2px solid #FF6A2B;outline-offset
 </div>
 <div style="max-width: 1360px; margin: 0 auto; padding: 0 24px">
 <div style="position: relative; min-height: 720px; box-sizing: border-box; border-radius: 36px; background: #0A0B10; color: #EEF0F4; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; padding: 32px">
-<canvas id="atom" role="img" aria-label="Rotating 3D model of an atom: a nucleus of 115 protons with three orbiting electrons" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block"></canvas>
+<canvas id="atom2d" aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block"></canvas>
+<canvas id="atom" role="img" aria-label="Interactive 3D model of an atom: a nucleus of 115 protons with three orbiting electrons" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; cursor: pointer"></canvas>
 <div style="position: relative; pointer-events: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8">
 <span>Element 115</span>
-<span>Nucleus: 115 protons · Move your pointer</span>
+<span>115 protons · Move to disturb · Click to split</span>
 </div>
 <div style="flex: 1 1 auto"></div>
 <div style="position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 32px">
@@ -223,16 +224,20 @@ Scroll to explore
 <p style="margin: 0; font-size: 19px; color: #B9BFC9; max-width: 28em; text-wrap: pretty">Tell us a little about your organization and we will follow up to talk through wireless, MDM, and security options.</p>
 <dl style="margin: 8px 0 0; display: flex; flex-direction: column">
 <div style="display: flex; flex-wrap: wrap; gap: 4px 24px; padding: 16px 0; border-top: 1px solid #2A2F38">
-<dt style="flex: 0 0 100px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Phone</dt>
-<dd style="margin: 0">[YOUR PHONE]</dd>
+<dt style="flex: 0 0 130px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Contact</dt>
+<dd style="margin: 0">Vic Maggio<br><span style="color: #B9BFC9">Chief Executive Officer, National Enterprise Accounts</span></dd>
 </div>
 <div style="display: flex; flex-wrap: wrap; gap: 4px 24px; padding: 16px 0; border-top: 1px solid #2A2F38">
-<dt style="flex: 0 0 100px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Email</dt>
-<dd style="margin: 0">[YOUR EMAIL]</dd>
+<dt style="flex: 0 0 130px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Mobile</dt>
+<dd style="margin: 0"><a href="tel:3302077647" style="color: #EEF0F4; text-underline-offset: 4px">330.207.7647</a></dd>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 4px 24px; padding: 16px 0; border-top: 1px solid #2A2F38">
+<dt style="flex: 0 0 130px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Urgent direct</dt>
+<dd style="margin: 0"><a href="tel:8035546955" style="color: #EEF0F4; text-underline-offset: 4px">803.554.6955</a></dd>
 </div>
 <div style="display: flex; flex-wrap: wrap; gap: 4px 24px; padding: 16px 0; border-top: 1px solid #2A2F38; border-bottom: 1px solid #2A2F38">
-<dt style="flex: 0 0 100px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Location</dt>
-<dd style="margin: 0">[YOUR CITY, STATE]</dd>
+<dt style="flex: 0 0 130px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A3ABB8; padding-top: 3px">Email</dt>
+<dd style="margin: 0"><a href="mailto:vicmaggio@elemant115.com" style="color: #EEF0F4; text-underline-offset: 4px">vicmaggio@elemant115.com</a></dd>
 </div>
 </dl>
 </div>
@@ -289,6 +294,266 @@ Scroll to explore
 </div>
 
 <script>
+function runGl(cv, getAccent) {
+var gl = null;
+try { gl = cv.getContext('webgl2', { alpha: false, antialias: true, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
+if (!gl) { return null; }
+var VS = [
+'#version 300 es',
+'layout(location=0) in vec2 aCorner;',
+'layout(location=1) in vec4 aPosR;',
+'layout(location=2) in vec4 aColK;',
+'uniform vec4 uProj;',
+'out vec2 vUv; out vec3 vC; out float vR; out vec3 vCol; out float vK;',
+'void main(){',
+'  vUv = aCorner; vC = aPosR.xyz; vR = aPosR.w; vCol = aColK.rgb; vK = aColK.a;',
+'  vec3 p = aPosR.xyz + vec3(aCorner * aPosR.w, 0.0);',
+'  gl_Position = vec4(p.x * uProj.x, p.y * uProj.y, uProj.z * p.z + uProj.w, -p.z);',
+'}'
+].join('\n');
+var FS = [
+'#version 300 es',
+'precision highp float;',
+'in vec2 vUv; in vec3 vC; in float vR; in vec3 vCol; in float vK;',
+'uniform vec4 uProj; uniform vec3 uAccent; uniform vec3 uBg; uniform vec2 uFog; uniform float uGlow;',
+'out vec4 o;',
+'void main(){',
+'  float r2 = dot(vUv, vUv);',
+'  if (uGlow > 0.5) {',
+'    float g = exp(-r2 * 4.5) * (1.0 - smoothstep(0.7, 1.0, r2));',
+'    gl_FragDepth = gl_FragCoord.z;',
+'    o = vec4(vCol * g * vK, 1.0);',
+'    return;',
+'  }',
+'  float fw = fwidth(r2);',
+'  float a = 1.0 - smoothstep(1.0 - fw, 1.0, r2);',
+'  if (a <= 0.0) { discard; }',
+'  vec3 n = vec3(vUv, sqrt(max(1.0 - r2, 0.0)));',
+'  vec3 pos = vC + n * vR;',
+'  gl_FragDepth = ((uProj.z * pos.z + uProj.w) / (-pos.z)) * 0.5 + 0.5;',
+'  vec3 V = normalize(-pos);',
+'  vec3 L1 = normalize(vec3(-0.55, 0.75, 0.6));',
+'  vec3 L2 = normalize(vec3(0.8, -0.35, 0.3));',
+'  float d1 = max(dot(n, L1), 0.0);',
+'  float d2 = max(dot(n, L2), 0.0);',
+'  float sp = pow(max(dot(n, normalize(L1 + V)), 0.0), 56.0);',
+'  float fr = pow(1.0 - max(dot(n, V), 0.0), 3.0);',
+'  vec3 col;',
+'  if (vK < 0.5) {',
+'    col = vCol * (0.14 + 0.95 * d1) + uAccent * 0.2 * d2 + vec3(0.6) * sp + mix(uAccent, vec3(1.0), 0.45) * fr * 0.3;',
+'  } else if (vK < 1.5) {',
+'    col = vCol * (0.85 + 0.4 * d1) + vec3(0.5) * fr;',
+'  } else {',
+'    col = vCol;',
+'  }',
+'  float fog = clamp((-pos.z - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);',
+'  col = mix(col, uBg, fog * 0.9);',
+'  o = vec4(col, a);',
+'}'
+].join('\n');
+function sh(type, src) {
+var s = gl.createShader(type);
+gl.shaderSource(s, src); gl.compileShader(s);
+if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { if (window.console) { console.warn(gl.getShaderInfoLog(s)); } return null; }
+return s;
+}
+var vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+if (!vs || !fs) { return null; }
+var prog = gl.createProgram();
+gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { return null; }
+gl.useProgram(prog);
+var uProj = gl.getUniformLocation(prog, 'uProj'), uAccent = gl.getUniformLocation(prog, 'uAccent'), uBg = gl.getUniformLocation(prog, 'uBg'), uFog = gl.getUniformLocation(prog, 'uFog'), uGlow = gl.getUniformLocation(prog, 'uGlow');
+var vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+var quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+var MAX = 1200, data = new Float32Array(MAX * 8), count = 0;
+var inst = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, inst);
+gl.bufferData(gl.ARRAY_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 0); gl.vertexAttribDivisor(1, 1);
+gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 32, 16); gl.vertexAttribDivisor(2, 1);
+gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+
+var host = cv.parentElement || cv;
+var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+var seed = 115;
+function rnd() { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+var N = 175, NR = 0.37;
+var hx = new Float32Array(N), hy = new Float32Array(N), hz = new Float32Array(N);
+var px = new Float32Array(N), py = new Float32Array(N), pz = new Float32Array(N);
+var vx = new Float32Array(N), vy = new Float32Array(N), vz = new Float32Array(N);
+var ao = new Float32Array(N), wob = new Float32Array(N), i;
+for (i = 0; i < N; i++) {
+var rr = NR * Math.cbrt(rnd()), th = 6.2832 * rnd(), ph = Math.acos(2 * rnd() - 1);
+hx[i] = px[i] = rr * Math.sin(ph) * Math.cos(th);
+hy[i] = py[i] = rr * Math.cos(ph);
+hz[i] = pz[i] = rr * Math.sin(ph) * Math.sin(th);
+ao[i] = 0.4 + 0.6 * Math.min(1, rr / NR);
+wob[i] = rnd() * 6.2832;
+}
+var DUST = 260, dust = new Float32Array(DUST * 5);
+for (i = 0; i < DUST; i++) {
+var dr = 1.35 + 2.4 * rnd(), dth = 6.2832 * rnd(), dph = Math.acos(2 * rnd() - 1);
+dust[i * 5] = dr * Math.sin(dph) * Math.cos(dth);
+dust[i * 5 + 1] = dr * Math.cos(dph) * 0.7;
+dust[i * 5 + 2] = dr * Math.sin(dph) * Math.sin(dth);
+dust[i * 5 + 3] = 0.006 + 0.012 * rnd();
+dust[i * 5 + 4] = 0.25 + 0.6 * rnd();
+}
+var rings = [{ tilt: 0, speed: 0.9, phase: 0 }, { tilt: 1.0472, speed: 0.7, phase: 2.1 }, { tilt: -1.0472, speed: 0.55, phase: 4.2 }];
+var RDOTS = 110, TRAIL = 34;
+var BG = [10 / 255, 11 / 255, 16 / 255], PALE = [0.86, 0.88, 0.92], WHITE = [1, 1, 1], RING = [0.3, 0.33, 0.38];
+function hex(h) {
+h = String(h || '').replace('#', '');
+if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+var n = parseInt(h, 16);
+if (h.length !== 6 || isNaN(n)) { return [1, 106 / 255, 43 / 255]; }
+return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+var tx = 0, ty = 0, mx = 0, my = 0, inside = false, raf = 0, alive = true, last = 0, clock = 0;
+var CAM = 4.2, R = [1, 0, 0, 0, 1, 0, 0, 0, 1], sc = 1;
+function onMove(e) {
+var r = host.getBoundingClientRect();
+if (!r.width || !r.height) { return; }
+tx = ((e.clientX - r.left) / r.width) * 2 - 1;
+ty = -(((e.clientY - r.top) / r.height) * 2 - 1);
+inside = true;
+}
+function onLeave() { tx = 0; ty = 0; inside = false; }
+function onDown() {
+for (var k = 0; k < N; k++) {
+var l = Math.sqrt(hx[k] * hx[k] + hy[k] * hy[k] + hz[k] * hz[k]) || 1;
+var f = 2.2 + 2.6 * rnd();
+vx[k] += (hx[k] / l) * f; vy[k] += (hy[k] / l) * f; vz[k] += (hz[k] / l) * f;
+}
+}
+function put(x, y, z, r, c, m, k) {
+if (count >= MAX) { return; }
+var o = count * 8;
+x *= sc; y *= sc; z *= sc;
+data[o] = R[0] * x + R[1] * y + R[2] * z;
+data[o + 1] = R[3] * x + R[4] * y + R[5] * z;
+data[o + 2] = R[6] * x + R[7] * y + R[8] * z - CAM;
+data[o + 3] = r * sc;
+data[o + 4] = c[0] * m; data[o + 5] = c[1] * m; data[o + 6] = c[2] * m; data[o + 7] = k;
+count++;
+}
+function fade(c, k) { return [c[0] + (BG[0] - c[0]) * k, c[1] + (BG[1] - c[1]) * k, c[2] + (BG[2] - c[2]) * k]; }
+function frame(t) {
+if (!alive) { return; }
+raf = requestAnimationFrame(frame);
+var rect = cv.getBoundingClientRect(), vh = window.innerHeight || 800;
+var dt = Math.min((t - last) / 1000, 1 / 30); if (!(dt > 0)) { dt = 0.016; } last = t;
+if (!rect.width || !rect.height || rect.bottom < 0 || rect.top > vh) { return; }
+var dpr = Math.min(window.devicePixelRatio || 1, 2);
+var W = Math.round(cv.clientWidth * dpr), H = Math.round(cv.clientHeight * dpr);
+if (!W || !H) { return; }
+if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+gl.viewport(0, 0, W, H);
+if (!reduce) { clock += dt; }
+var s = clock;
+mx += (tx - mx) * 0.06; my += (ty - my) * 0.06;
+var pr = Math.max(-1, Math.min(1, (vh * 0.5 - (rect.top + rect.height * 0.5)) / vh));
+var ry = s * 0.22 + mx * 0.8, rx = 0.38 - my * 0.35 + pr * 0.5;
+sc = 1 + Math.max(pr, 0) * 0.3;
+var cy = Math.cos(ry), sy = Math.sin(ry), cx = Math.cos(rx), sx = Math.sin(rx);
+R[0] = cy; R[1] = 0; R[2] = sy;
+R[3] = sy * sx; R[4] = cx; R[5] = -cy * sx;
+R[6] = -sy * cx; R[7] = sx; R[8] = cy * cx;
+var aspect = W / H, F = 3.17, fx, fy;
+if (aspect >= 1) { fy = F; fx = F / aspect; } else { fx = F * 0.9; fy = fx * aspect; }
+var near = 0.5, far = 20, A = (far + near) / (near - far), B = (2 * far * near) / (near - far);
+var accent = hex(getAccent());
+
+var pvx = (tx / fx) * CAM, pvy = (ty / fy) * CAM, rad = 0.55, k;
+for (k = 0; k < N; k++) {
+var ax = -34 * (px[k] - hx[k]) - 3.4 * vx[k];
+var ay = -34 * (py[k] - hy[k]) - 3.4 * vy[k];
+var az = -34 * (pz[k] - hz[k]) - 3.4 * vz[k];
+if (inside) {
+var qx = (R[0] * px[k] + R[1] * py[k] + R[2] * pz[k]) * sc - pvx;
+var qy = (R[3] * px[k] + R[4] * py[k] + R[5] * pz[k]) * sc - pvy;
+var d = Math.sqrt(qx * qx + qy * qy);
+if (d < rad && d > 0.0001) {
+var f = (1 - d / rad); f = f * f * 55;
+var fxv = (qx / d) * f, fyv = (qy / d) * f;
+ax += R[0] * fxv + R[3] * fyv; ay += R[1] * fxv + R[4] * fyv; az += R[2] * fxv + R[5] * fyv;
+}
+}
+vx[k] += ax * dt; vy[k] += ay * dt; vz[k] += az * dt;
+px[k] += vx[k] * dt; py[k] += vy[k] * dt; pz[k] += vz[k] * dt;
+}
+
+count = 0;
+for (k = 0; k < N; k++) {
+var wv = 0.01;
+put(px[k] + wv * Math.sin(s * 1.7 + wob[k]), py[k] + wv * Math.cos(s * 1.3 + wob[k]), pz[k] + wv * Math.sin(s * 1.1 + 2 * wob[k]), 0.066, k < 115 ? accent : PALE, ao[k], 0);
+}
+var j, a, ang;
+for (j = 0; j < rings.length; j++) {
+var rg = rings[j], ct = Math.cos(rg.tilt), st = Math.sin(rg.tilt);
+for (a = 0; a < RDOTS; a++) {
+ang = (a / RDOTS) * 6.2832;
+put(Math.cos(ang) * ct, Math.cos(ang) * st, Math.sin(ang), 0.0055, RING, 1, 2);
+}
+var ea = s * rg.speed + rg.phase, ecol = j === 0 ? accent : WHITE;
+for (a = TRAIL; a >= 1; a--) {
+ang = ea - a * 0.03;
+var q = a / TRAIL;
+put(Math.cos(ang) * ct, Math.cos(ang) * st, Math.sin(ang), 0.034 * (1 - q) + 0.004, fade(ecol, 0.25 + 0.75 * q), 1, 2);
+}
+put(Math.cos(ea) * ct, Math.cos(ea) * st, Math.sin(ea), 0.05, ecol, 1, 1);
+}
+var da = s * 0.03, dc = Math.cos(da), ds = Math.sin(da);
+for (k = 0; k < DUST; k++) {
+var o5 = k * 5;
+put(dust[o5] * dc + dust[o5 + 2] * ds, dust[o5 + 1] + 0.05 * Math.sin(s * 0.4 + k), -dust[o5] * ds + dust[o5 + 2] * dc, dust[o5 + 3], PALE, dust[o5 + 4], 2);
+}
+var solid = count;
+put(0, 0, 0, 1.3, accent, 1, 0.22);
+for (j = 0; j < rings.length; j++) {
+var rg2 = rings[j], ea2 = s * rg2.speed + rg2.phase, c2 = Math.cos(rg2.tilt), s2 = Math.sin(rg2.tilt);
+put(Math.cos(ea2) * c2, Math.cos(ea2) * s2, Math.sin(ea2), 0.36, j === 0 ? accent : WHITE, 1, 0.55);
+}
+
+gl.useProgram(prog); gl.bindVertexArray(vao);
+gl.bindBuffer(gl.ARRAY_BUFFER, inst);
+gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, count * 8);
+gl.uniform4f(uProj, fx, fy, A, B);
+gl.uniform3f(uAccent, accent[0], accent[1], accent[2]);
+gl.uniform3f(uBg, BG[0], BG[1], BG[2]);
+gl.uniform2f(uFog, CAM - 1.2, CAM + 3.4);
+gl.clearColor(BG[0], BG[1], BG[2], 1);
+gl.depthMask(true);
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+gl.disable(gl.BLEND);
+gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+gl.uniform1f(uGlow, 0);
+gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, solid);
+gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+gl.depthMask(false);
+gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+gl.uniform1f(uGlow, 1);
+gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, solid * 32);
+gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 32, solid * 32 + 16);
+gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count - solid);
+gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 0);
+gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 32, 16);
+gl.depthMask(true);
+}
+host.addEventListener('pointermove', onMove);
+host.addEventListener('pointerleave', onLeave);
+host.addEventListener('pointerdown', onDown);
+raf = requestAnimationFrame(frame);
+return function () {
+alive = false;
+cancelAnimationFrame(raf);
+host.removeEventListener('pointermove', onMove);
+host.removeEventListener('pointerleave', onLeave);
+host.removeEventListener('pointerdown', onDown);
+};
+}
 function runAtom(cv, getAccent) {
 var ctx = cv.getContext('2d');
 if (!ctx) { return function () {}; }
@@ -395,7 +660,12 @@ host.removeEventListener('pointerleave', onLeave);
 window.removeEventListener('resize', onResize);
 };
 }
-runAtom(document.getElementById('atom'), function () { return '#FF6A2B'; });
+(function () {
+var accent = function () { return '#FF6A2B'; };
+var three = document.getElementById('atom'), two = document.getElementById('atom2d');
+if (runGl(three, accent)) { two.style.display = 'none'; }
+else { three.style.display = 'none'; runAtom(two, accent); }
+})();
 </script>
 </body>
 </html>
